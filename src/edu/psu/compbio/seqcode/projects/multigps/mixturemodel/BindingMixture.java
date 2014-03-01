@@ -66,7 +66,7 @@ public class BindingMixture {
 		activeComponents = new HashMap<Region, List<List<BindingComponent>>>();
 		for(ExperimentCondition cond : manager.getExperimentSet().getConditions()){
 			conditionBackgrounds.put(cond, new BackgroundCollection());
-			conditionBackgrounds.get(cond).addBackgroundModel(new PoissonBackgroundModel(-1, config.getSigLogConf(), cond.getTotalSignalCount(), config.getGenome().getGenomeLength(), config.getMappableGenomeProp(), cond.getMaxModelRange(), '.', 1, true));
+			conditionBackgrounds.get(cond).addBackgroundModel(new PoissonBackgroundModel(-1, config.getSigLogConf(), cond.getTotalSignalEstBackCount(), config.getGenome().getGenomeLength(), config.getMappableGenomeProp(), cond.getMaxModelRange(), '.', 1, true));
 			System.err.println("Alpha "+cond.getName()+"\tRange="+cond.getMaxModelRange()+"\t"+(double)conditionBackgrounds.get(cond).getMaxThreshold('.'));
 		}
 		
@@ -82,7 +82,7 @@ public class BindingMixture {
 			double L = (double)config.getGenome().getGenomeLength();
 			double infoProbAgivenB = Math.log(config.getProbSharedBinding())/Math.log(2);
 	        double infoProbAgivenNOTB =  Math.log((N-S)/(L-N+S))/Math.log(2);
-			System.err.println("Multi-condition positional priors:\tA given B:"+infoProbAgivenB+"\tA given notB:"+infoProbAgivenNOTB);
+			System.err.println("Multi-condition positional priors:\tA given B:"+String.format("%.4f", infoProbAgivenB)+"\tA given notB:"+String.format("%.4f", infoProbAgivenNOTB));
 		}
 	}
 	
@@ -299,7 +299,7 @@ public class BindingMixture {
     public void updateAlphas(){
     	for(ExperimentCondition cond : manager.getExperimentSet().getConditions()){
 			conditionBackgrounds.put(cond, new BackgroundCollection());
-			conditionBackgrounds.get(cond).addBackgroundModel(new PoissonBackgroundModel(-1, config.getSigLogConf(), cond.getTotalSignalCount(), config.getGenome().getGenomeLength(), config.getMappableGenomeProp(), cond.getMaxModelRange(), '.', 1, true));
+			conditionBackgrounds.get(cond).addBackgroundModel(new PoissonBackgroundModel(-1, config.getSigLogConf(), cond.getTotalSignalEstBackCount(), config.getGenome().getGenomeLength(), config.getMappableGenomeProp(), cond.getMaxModelRange(), '.', 1, true));
 			System.err.println("Alpha "+cond.getName()+"\tRange="+cond.getMaxModelRange()+"\t"+(double)conditionBackgrounds.get(cond).getMaxThreshold('.'));
 		}
     }
@@ -324,14 +324,17 @@ public class BindingMixture {
     }
 
     /**
-     * Initialize the global noise parameters, using only non-potential region counts
+     * Initialize the global noise parameters. Inferred either from:
+     *  - non-potential region read counts, or
+     *  - noise proportion of reads from SES
      */
     protected void initializeGlobalNoise(){
     	for(int e=0; e<manager.getNumConditions(); e++){
     		ExperimentCondition cond = manager.getExperimentSet().getIndexedCondition(e);
+    		
+    		// Part that deals with read counts from non-potential regions... calculate values anyway whether using them or not
     		double potRegLengthTotal = potRegFilter.getPotRegionLengthTotal();
     		double nonPotRegLengthTotal = config.getGenome().getGenomeLength() - potRegLengthTotal;
-    		
     		//Combine control channel counts (avoiding duplication)
     		double potRegCountsSigChannel=0, nonPotRegCountsSigChannel=0; 
     		double potRegCountsCtrlChannel=0, nonPotRegCountsCtrlChannel=0; 
@@ -346,12 +349,17 @@ public class BindingMixture {
     			potRegCountsSigChannel+=potRegFilter.getPotRegCountsSigChannel(rep);
 				nonPotRegCountsSigChannel+=potRegFilter.getNonPotRegCountsSigChannel(rep);
     		}
-    		noisePerBase[e] = nonPotRegCountsSigChannel/nonPotRegLengthTotal;  //Signal channel noise per base
-    		System.err.println("Global noise per base initialization for "+cond.getName()+" = "+noisePerBase[e]);
     		//relativeCtrlNoise just tells us if there is a systemic over/under representation of reads in potential regions (in the control)
     		//NOTE: not used for anything right now. 
     		relativeCtrlNoise[e] = (potRegCountsCtrlChannel==0 && nonPotRegCountsCtrlChannel==0) ? 
     				1 : (potRegCountsCtrlChannel/potRegLengthTotal)/(nonPotRegCountsCtrlChannel/nonPotRegLengthTotal);
+
+    		
+    		if(config.getScalingBySES())
+    			noisePerBase[e] = (cond.getTotalSignalEstBackCount())/ config.getMappableGenomeLength();
+    		else
+    			noisePerBase[e] = nonPotRegCountsSigChannel/nonPotRegLengthTotal;  //Signal channel noise per base
+    		System.err.println("Global noise per base initialization for "+cond.getName()+" = "+String.format("%.4f", noisePerBase[e]));
     	}
     }
     

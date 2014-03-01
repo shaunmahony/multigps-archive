@@ -29,17 +29,18 @@ public class EdgeRDifferentialEnrichment extends DifferentialEnrichment{
 	
 	/**
 	 * execute: make & run an appropriate EdgeR script 
-	 */
+	 */ 
 	public CountsDataset execute(CountsDataset dat) {
 		this.data = dat;
 		String repCountsFilename = config.getOutputParentDir()+File.separator+config.getOutBase()+".replicates.counts";
-		String scriptFilename = config.getOutputParentDir()+File.separator+"call_DE_GLM.R";
+		String scriptFilename = config.getOutputParentDir()+File.separator+"call_DE_GLM"+fileIDname+".R";
 		
 		//Write the R script
 		try {
     		FileWriter fout = new FileWriter(scriptFilename);
     		fout.write(	"#!/usr/bin/Rscript --vanilla \n"+
     					"# Rscript call_DE_GLM.R repCounts.txt 0.15 \n" +
+    					"# Dataset: "+data.getCondName(data.getFocalCondition())+"\n" +
     					"library(edgeR) \n" +
     					"args <- commandArgs(TRUE) \n"+
     					"raw <- read.delim(args[1], row.names=\"Point\") \n"+
@@ -91,7 +92,9 @@ public class EdgeRDifferentialEnrichment extends DifferentialEnrichment{
     		fout.close();
 
     		//Run the R script
-    		Process proc = Runtime.getRuntime().exec("Rscript "+scriptFilename+" "+repCountsFilename+" "+config.getEdgeROverDisp());
+    		String Rscriptcmd = config.getRpath()+"Rscript ";
+    		System.err.println("Running: "+Rscriptcmd+" "+scriptFilename+" "+repCountsFilename+" "+config.getEdgeROverDisp());
+    		Process proc = Runtime.getRuntime().exec(Rscriptcmd+" "+scriptFilename+" "+repCountsFilename+" "+config.getEdgeROverDisp());
     		// any error message? 
 			StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream(), "R_ERR", true); 
 			// any output? 
