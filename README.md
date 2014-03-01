@@ -6,6 +6,7 @@ SeqCode: Java code for the analysis of high-throughput sequencing data
 This repository includes projects that are released by Shaun Mahony's lab at Penn State University. 
 
 The MultiGPS code is located under edu.psu.compbio.seqcode.projects.multigps, and the main method is edu.psu.compbio.seqcode.projects.multigps.analysis.MultiGPS.
+MultiGPS is currently on version 0.5
 
 Much of the gse package (edu.psu.compbio.seqcode.gse) is based on GSE, the "Genomic Spatial Events" codebase from the Gifford lab at CSAIL, MIT (package: edu.mit.csail.cgs.gse). 
 GSE is outlined in this publication: http://www.ncbi.nlm.nih.gov/pubmed/18229714
